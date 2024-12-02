@@ -1,6 +1,6 @@
 # **Sales Data Pipeline with Docker, ClickHouse, and Grafana**
 
-This project sets up a scalable, containerized data pipeline for ingesting, processing, storing, and visualizing sales data. It leverages AWS S3 for raw data storage, ClickHouse for data analytics, and Grafana for visualizations.
+This project sets up a scalable, containerized data pipeline for ingesting, processing, storing, and visualizing sales data. It leverages Minio S3 for raw data storage, ClickHouse for data analytics, and Grafana for visualizations.
 
 ---
 
