@@ -1,0 +1,17 @@
+1. CREATE BUCKET
+
+curl -X POST -H "Content-Type: application/json" -d '{"bucket_name": "bucket-name"}' http://localhost:5000/bucket
+
+2. Upload file(s)
+
+curl -X POST -F "file=@file.csv" 'http://localhost:5000/ingest/sales?bucket_name=bucket-name'
+
+3. Generate metrics
+
+curl -X POST 'http://localhost:5000/transform/sales?bucket_name=bucket-name&file_name=file.csv'
+
+
+#########
+curl -X GET 'http://localhost:5000/buckets'
+curl -X GET 'http://localhost:5000/objects?bucket_name=bucket-name'
+

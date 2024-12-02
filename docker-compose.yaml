@@ -1,0 +1,72 @@
+---
+version: "3.9"
+
+services:
+  backend:
+    container_name: backend
+    image: optinova:latest
+    # This user will be used by default in the container.
+    # When we want to run as root, change the following line
+    # user: "root:root"
+    user: "1001:1001"
+    build:
+      dockerfile: ./backend.Dockerfile
+      context: ./
+      target: base
+    working_dir: /code
+    command: sh -c "flask run -h 0.0.0.0 -p 5000"
+    environment:
+      - FLASK_DEBUG=true
+      - FLASK_APP=run_app
+    restart: on-failure
+    ports:
+      - 127.0.0.1:5000:5000
+    volumes:
+      # so can edit locally
+      - type: bind
+        source: .
+        target: /code
+    networks:
+      - ch_network
+
+  minio:
+    container_name: minio
+    image: minio/minio:RELEASE.2022-02-24T22-12-01Z
+    command: server /data --console-address ":9001"
+    ports:
+      - 127.0.0.1:9000:9000
+      - 127.0.0.1:9001:9001
+    environment:
+      MINIO_ROOT_USER: minio # access key
+      MINIO_ROOT_PASSWORD: minioPassword # secret key
+    networks:
+      - ch_network
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.3.6
+    volumes:
+      - ./data:/var/lib/clickhouse
+      - ./logs:/var/log/clickhouse-server
+    ports:
+      - "8123:8123"
+      - "9010:9000"
+    ulimits:
+      nproc: 65535
+      nofile:
+        soft: 262144
+        hard: 262144
+    networks:
+      - ch_network
+     
+  grafana:
+    image: grafana/grafana-enterprise
+    container_name: grafana
+    restart: unless-stopped
+    ports:
+     - '3000:3000'
+    networks:
+      - ch_network
+
+networks:
+  ch_network:
+    driver: bridge

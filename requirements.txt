@@ -1,0 +1,8 @@
+Flask==3.1.0
+requests==2.32.0
+pandas==2.2.3
+boto3==1.35.71
+botocore==1.35.71
+clickhouse_connect==0.8.8
+flask_swagger==0.2.14
+flask_swagger_ui==4.11.1

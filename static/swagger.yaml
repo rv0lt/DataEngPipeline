@@ -1,0 +1,256 @@
+# yammllint and prettier conflict with some rules, disable them
+# yamllint disable rule:braces
+openapi: 3.0.0
+info:
+  description: | # html syntax is allowed
+  version: "version 2"
+  title: System
+# Apply the encrypted token to all operations
+servers:
+  - url: http://localhost:5000/
+    description: Local enviroment
+tags:
+  - name: Data Ingestion
+  - name: Data Transformation
+  - name: helper
+paths:
+  /bucket:
+    post:
+      tags:
+        - Data Ingestion
+      summary: Create a new bucke
+      description: |
+        Create a new S3 bucket.
+        This endpoint expects a JSON payload with a "bucket_name" key. If the bucket
+        name is not provided, it returns a 400 error. If the bucket already exists,
+        it returns a 400 error. Otherwise, it creates the bucket and returns a 201
+        status with a success message.
+        Returns:
+          Response: JSON response indicating success or failure.x
+      operationId: createBucket
+      responses:
+        "400":
+          description: Bucket already exists
+          content:
+            application/json:
+              schema:
+                type: string
+                example: "{error: Bucket already exists}"
+        "200":
+          description: succesful operation
+          content:
+            application/json:
+              schema:
+                type: string
+                example: "{message: Bucket created successfully}"
+      requestBody:
+        $ref: "#/components/requestBodies/Bucket"
+  /ingest/sales: 
+      post:
+        tags:
+          - Data Ingestion
+        summary: Ingest sales data
+        description: |
+          Handles the ingestion of sales data by uploading CSV file(s) to an S3 bucket.
+          This function expects a 'bucket_name' parameter in the request arguments and a file
+          in the request files. The file must be a CSV file. The function uploads the file to
+          the specified S3 bucket.
+          Returns:
+            Response: A JSON response indicating the success or failure of the upload operation.
+            "On success: {"message": "File(s) uploaded successfully"}, HTTP status code 201."
+            - On failure: {"error": "Missing bucket_name"}, HTTP status code 400.
+            - On failure: {"error": "S3 upload of file failed: <error_message>"}, HTTP status code 500.
+          Raises:
+            botocore.client.ClientError: If there is an error during the S3 upload.
+            boto3.exceptions.Boto3Error: If there is a Boto3-specific error.
+            botocore.exceptions.BotoCoreError: If there is a BotoCore-specific error.
+        consumes:
+        - multipart/form-data
+        operationId: ingestSales
+        parameters:
+        - name: bucket_name
+          in: query
+          required: true
+          schema:
+            type: string
+            example: bucket-name
+        responses:
+          "400":
+            description: Invalid data
+            content:
+              application/json:
+                schema:
+                  type: string
+                  example: "{error: Missing bucket_name}"
+          "500":
+            description: Internal server error
+            content:
+              application/json:
+                schema:
+                  type: string
+                  example: "{error: Internal server error}"
+          "200":
+            description: succesful operation
+            content:
+              application/json:
+                schema:
+                  type: string
+                  example: "{message: File(s) uploaded successfully}"
+        requestBody:
+          content:
+            multipart/form-data:
+              schema:
+                type: object
+                properties:
+                  file:
+                    type: string
+                    format: binary
+  /transform/sales:
+    post:
+      tags:
+        - Data Transformation
+      summary: Transform sales data
+      description: |
+        Transforms sales data from a CSV file stored in an S3 bucket, processes it, 
+        and stores the results in a ClickHouse database.
+
+        The function performs the following steps:
+        1. Retrieves the S3 bucket name and file name from the request arguments.
+        2. Downloads the CSV file from the specified S3 bucket.
+        3. Loads the CSV data into a pandas DataFrame.
+        4. Validates the columns of the CSV file.
+        5. Ensures that 'quantity' and 'price' columns are numeric and handles missing data.
+        6. Calculates the 'total_sales' for each row.
+        7. Groups the data by 'product_id' and calculates metrics such as total sales sum, 
+          average quantity, total quantity, and number of sales.
+        8. Creates a table in ClickHouse if it does not exist and inserts the processed data.
+        9. Returns the grouped metrics as a JSON response.
+
+        Returns:
+            A JSON response containing the grouped metrics or an error message with the 
+            appropriate HTTP status code.
+      operationId: transformSales
+      parameters:
+        - name: bucket_name
+          in: query
+          required: true
+          schema:
+            type: string
+            example: bucket-name
+        - name: file_name
+          in: query
+          required: true
+          schema:
+            type: string
+            example: file.csv
+      responses:
+        "400":
+          description: Invalid data
+          content:
+            application/json:
+              schema:
+                type: string
+                example: "{error: Missing bucket_name}"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: string
+                example: "{error: Internal server error}"
+        "200":
+          description: succesful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  product_id:
+                    type: string
+                    example: 123
+                  total_sales_sum:
+                    type: number
+                    example: 1000
+                  average_quantity:
+                    type: number
+                    example: 10
+                  total_quantity:
+                    type: number
+                    example: 100
+                  number_of_sales:
+                    type: integer
+                    example: 10
+  /buckets:
+    get:
+      tags:
+        - helper
+      summary: List all buckets
+      description: |
+        List all S3 buckets.
+        This endpoint returns a JSON response with a list of all S3 buckets.
+        Returns:
+          Response: JSON response containing a list of all S3 buckets.
+      operationId: listBuckets
+      responses:
+        "200":
+          description: succesful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+                example: ["bucket1", "bucket2"]
+  /objects:
+    get:
+      tags:
+        - helper
+      summary: List all objects in a bucket
+      description: |
+        List all objects in an S3 bucket.
+        This endpoint expects a 'bucket_name' parameter in the request arguments and returns
+        a JSON response with a list of all objects in the specified S3 bucket.
+        Returns:
+          Response: JSON response containing a list of all objects in the specified S3 bucket.
+      operationId: listObjects
+      parameters:
+        - name: bucket_name
+          in: query
+          required: true
+          schema:
+            type: string
+            example: bucket-name
+      responses:
+        "400":
+          description: Invalid data
+          content:
+            application/json:
+              schema:
+                type: string
+                example: "{error: Missing bucket_name}"
+        "200":
+          description: succesful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+                example: ["object1", "object2"]
+
+components:
+  # Define common request bodies:
+  requestBodies:
+    Bucket:
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Bucket"
+  # define schemas for objects
+  schemas:
+    Bucket:
+      type: object
+      properties:
+        bucket_name :
+          type: string
+          example: bucket-name
