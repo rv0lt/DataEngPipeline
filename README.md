@@ -135,7 +135,3 @@ project-root/
 - **Security Enhancements:** Implement role-based access controls (RBAC) and secure API endpoints.
 - **Scalability Improvements:** Configure a K8s cluster for running this resources in a distributed framework to handle large datasets.
 - **Monitoring and Alerts:** Integrate monitoring tools to track the performance of the pipeline and set up alerts for failures.
-
----
-
-This README provides the necessary setup and configuration details to deploy and run your end-to-end sales data pipeline using Docker Compose. 🚀
